@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+<script src="js/easeljs-0.8.2.min.js"></script>    
+<script src="js/preloadjs-0.6.2.min.js"></script>    
+<script src="js/soundjs-0.6.2.min.js"></script>    
+<title>Document</title>
+<style>
+*{margin: 0;padding: 0;}
+body{width:100%;height:100vh;display: flex;justify-content: center; align-items: center}
+#c1{border:1px solid black;}
+</style>
+<script>
+	window.onload = function () {   
+		var stage = new createjs.Stage("c1");   
+		var oAR=[];
+		var speed=2;
+		var xSpeed=0;
+		var scoreText;
+		var oRole;
+		var oImgNR;
+		var score=0;
+		var timer;
+		var data;
+		var spriteSheet;
+		var fall,right,left;
+		var bgm;
+		var loader= new createjs.LoadQueue(false);
+		loader.installPlugin(createjs.Sound);
+		loader.addEventListener("complete",handleComplete);//加载完成，显示开始页面
+		loader.loadManifest([//加载资源图片
+			{id:"all",src:"img/all.png"},
+			{id:"normalRect",src:"img/normal_rect.png"},
+			{id:"leftRect",src:"img/left_rect1.png"},
+			{id:"rightRect",src:"img/right_rect1.png"},
+			{id:"top",src:"img/top.png"},
+			{id:"bgm",src:"sound/GoPicnic.mp3"},
+			{id:"dMusic",src:"sound/die.mp3"},
+			{id:"dva",src:"img/dva.png"}
+		]);
+
+		function handleComplete()//加载完成，开始页面
+		{
+			createOImg();
+			oHuaji=loader.getResult("all");
+			oRole=new createjs.Sprite(spriteSheet,"fall");
+			oRole.x=300-oRole.getBounds().width/2;
+			startGame();
+		}
+
+
+
+		function createOImg()//创建图片对象
+		{
+			oImgNR=loader.getResult("normalRect");
+			oImgLR=loader.getResult("leftRect");
+			oImgRR=loader.getResult("rightRect");
+			oDva=loader.getResult("dva");
+			oAll=loader.getResult("all");
+			var data =
+				{
+					framerate:60,
+					"images": [
+						oAll
+					],
+					
+					"frames": [
+						[0, 0, 40,60 , 0, 0, 0],
+						[40, 0, 40, 60, 0, 0, 0],
+						[80, 0, 40, 60, 0, 0, 0],
+						[120, 0, 40, 60, 0, 0, 0],
+						[160, 0, 40,60, 0, 0, 0],
+						[200, 0, 40, 60, 0, 0, 0],
+						[240, 0, 40, 60, 0, 0, 0],
+						[280, 0, 50, 50, 0, 0, 0],
+						[330,0,40,60,0,0,0]
+					],
+
+					"animations": {
+						"right":	{ "frames": [0,1,2] ,"speed":0.1},
+						"left":	{ "frames": [3,4,5] ,"speed":0.1},
+						"fall":	{ "frames": [6]},
+						"die":	{ "frames": [7] },
+						"zheng":	{ "frames": [8] },
+						"p6":	{ "frames": [5] },
+						"p7":	{ "frames": [6] },
+						"p8":	{ "frames": [7] },
+						"p9":	{ "frames": [8] },
+					
+					}	
+				};
+				spriteSheet = new createjs.SpriteSheet(data); 
+			
+		}
+
+		function beginGame(){//游戏开始
+		background();
+		
+		timer=setInterval(function () {//游戏主入口，60帧数
+			addRole();
+			createAR();
+			speedChange();
+			showScoreText(score);
+			gameover();
+			stage.update();
+		},1000/60);
+		}
+
+		function startGame()//开始页面
+		{
+			var startRect=new createjs.Shape();
+			startRect.graphics.beginFill("white").drawRect(200,200,200,200);
+			var startText = new createjs.Text("是兔子就下100层","20px Arial","black")
+			var beginText = new createjs.Text("开始游戏","15px Arial","white")
+			var startHuaji=new createjs.Bitmap(oDva);
+			startHuaji.x=300-startHuaji.getBounds().width/2;
+			startHuaji.y=300-startHuaji.getBounds().height/2-50;
+			centerXY(startText,300,330);
+			centerXY(beginText,300,360);
+			var beginRect=new createjs.Shape();
+			beginRect.graphics.beginFill("red").drawRect(beginText.x,beginText.y,beginText.getBounds().width,beginText.getBounds().height+5);
+			stage.addChild(startRect,startHuaji,beginRect,beginText,startText);
+			beginRect.addEventListener("click",function(){stage.removeChild(startRect,startText,startHuaji,beginRect,beginText);beginGame()})
+			stage.update();
+		}
+
+		function showScoreText(s) {//显示分数
+			stage.removeChild(scoreText);
+			scoreText = new createjs.Text( ""+s+"  " ,"20px Arial","red");
+			scoreText.x = 600 - scoreText.getBounds().width;
+			scoreText.y = 10;
+			stage.addChild(scoreText);
+			score++;
+		}
+
+		var f=null;
+		function addRole()//主角 控制
+		{
+			var f1;
+			if(speed>=0){oRole.gotoAndPlay("fall"),f=1}
+			else{
+				if(f==1)
+				{
+					f=2;oRole.gotoAndPlay("zheng")
+				}
+		}
+			document.onkeydown=function (ev)//键盘运动
+		{
+			var oEvent=ev||event;
+			if(oEvent.keyCode==37)
+			{
+				oRole.gotoAndPlay("left");clearTimeout(f1);setTimeout(f1=function(){f=1},400);//向左移动的帧动画
+				if(oRole.x<=0){oRole.x=0}
+				else{oRole.x=oRole.x-12;}
+			}else if(oEvent.keyCode==39)
+			{
+				oRole.gotoAndPlay("right");clearTimeout(f1);setTimeout(f1=function(){f=1},400);//向右移动的帧动画
+				if(oRole.x>=600-oRole.getBounds().width){oRole.x=600-oRole.getBounds().width}
+				else{oRole.x=oRole.x+12;}
+			}
+		};  
+		stage.addChild(oRole);
+		}
+
+		//随机生成方块
+		var a=0;
+		var b=0;
+		var c=0;
+		function createAR()//各种方块
+		{
+			b++;
+			if(b%50==0 || b==0){
+			if(a%Math.floor(2*Math.random())==0 && a!=0 && a!=1){
+				if(a%2==0){oAR[a]=new createjs.Bitmap(oImgLR);oAR[a].xSpeed=-1;}//向左方块
+				else{oAR[a]=new createjs.Bitmap(oImgRR);oAR[a].xSpeed=1;}//向右方块
+				}
+			else{oAR[a]=new createjs.Bitmap(oImgNR);oAR[a].xSpeed=0;}//正常方块
+			
+			oAR[a].x=Math.random()*520;
+			oAR[a].y=600;
+			a++;}
+			if(oAR.length==0){}//移除方块
+			else 
+			{
+				for(i=c;i<oAR.length;i++)
+				{
+					oAR[i].y=oAR[i].y - 2;
+					stage.addChild(oAR[i]);
+					if(oAR[i].y<0){
+						stage.removeChild(oAR[i]);
+						c++;
+					}
+				}
+			}
+			}
+			
+				
+
+		function check()//物体碰撞
+		{
+			if(oAR.length==0){}
+			{for(i=c;i<oAR.length;i++)
+			{if(oAR[i].x+80>=oRole.x&&oAR[i].x<=oRole.x+40)
+					{
+						if(oAR[i].y+5>=oRole.y+60&&oAR[i].y<=oRole.y+60)
+						{
+							if(i==0){i=1;}
+							return i;
+							}
+					}
+			}
+			}
+		}
+		function speedChange()//速度变化
+		{
+			if (check())
+			{
+				speed=-2;
+				xS=oAR[check()].xSpeed;	
+			}
+			else
+			{
+				xS=0;
+				if(speed<0){speed=2}
+				speed=speed+0.02;
+				}
+			oRole.y=oRole.y+speed;
+			oRole.x=oRole.x+xS;
+		}
+
+		function gameover()//游戏结束判定
+		{
+			if(oRole.y<-10||oRole.y+60>650)
+			{
+				gameoverText();
+				clearInterval(timer);
+				oRole.gotoAndPlay("die");
+				createjs.Sound.play("dMusic");
+				bgm.paused=true;
+			}
+		}	
+		function gameoverText()//结束界面
+		{
+			var gameoverText = new createjs.Text("gameover","30px Arial","white");
+			var scoreText = new createjs.Text("你的成绩是"+(score-1),"15px Arial","white")
+			var gameoverRect = new createjs.Shape();
+			var gameoverRect1 = new createjs.Shape();
+			gameoverRect.graphics.beginFill("black").drawRect(200,200,200,200);
+			var playAgain = new createjs.Text("再玩一遍","20px Arial","white");
+			scoreText.x = 300 - scoreText.getBounds().width / 2;
+			scoreText.y = 300 - scoreText.getBounds().height / 2 ;
+			gameoverText.x = 300 - gameoverText.getBounds().width / 2;
+			gameoverText.y = 300 - gameoverText.getBounds().height / 2 - 40;
+			playAgain.x = 300 - playAgain.getBounds().width / 2 ;
+			playAgain.y = 300 - playAgain.getBounds().height / 2 + 40;
+			gameoverRect1.graphics.beginFill("blue").beginStroke("white").drawRect(300 -playAgain.getBounds().width / 2,300 - playAgain.getBounds().height / 2 + 40, playAgain.getBounds().width,playAgain.getBounds().height);
+			gameoverRect1.addEventListener("click",function(){window.location.reload();})
+			playAgain.addEventListener("click",function(){window.location.reload();})
+			stage.addChild(gameoverRect,gameoverRect1,scoreText,gameoverText,playAgain);
+			stage.update;
+		}	
+					
+		function background()//背景
+		{
+			imgTop=loader.getResult("top");
+			var oTop=new createjs.Bitmap(imgTop);
+			oTop.x=0;
+			oTop.y=0;
+			stage.addChild(oTop);
+				bgm = createjs.Sound.createInstance("bgm"); 
+				bgm.play(); 
+				bgm.loop=-1;//bgm
+		}
+
+		function centerXY(obj,x,y)//居中对齐函数
+		{
+			obj.x=x-obj.getBounds().width/2;
+			obj.y=y-obj.getBounds().height/2;
+		}		
+		};  
+		
+</script>
+</head>
+<body>
+<canvas id="c1" height="600px" width="600px" ></canvas>
+</body>
+</html>
